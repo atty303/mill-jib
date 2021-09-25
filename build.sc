@@ -1,10 +1,8 @@
 import mill._
-import mill.define.Target
-import scalalib._
-import publish._
+import mill.scalalib._
+import mill.scalalib.publish._
 
 trait MyPublishModule extends PublishModule {
-  //override def artifactName = "mill-" + super.artifactName()
   override def publishVersion = "0.1.0"
   override def pomSettings = PomSettings(
     description = "Dockerize java applications on mill builds",
@@ -43,9 +41,6 @@ object jib extends MyModule {
   override def artifactName = "mill-jib"
   override def moduleDeps = Seq(api)
 
-  override def ivyDeps = Agg(
-    ivy"com.linkedin.cytodynamics:cytodynamics-nucleus:0.2.0"
-  )
   override def compileIvyDeps = Agg(
     ivy"com.lihaoyi::mill-scalalib:${millVersion}"
   )
