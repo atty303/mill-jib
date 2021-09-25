@@ -7,12 +7,12 @@ import com.google.cloud.tools.jib.api.{
   LogEvent,
   RegistryImage
 }
-import io.github.atty303.mill.jib.worker.{Image, JibWorker}
+import io.github.atty303.mill.jib.worker.api.{Image, JibWorker}
 
 import java.nio.file.Path
 import scala.jdk.CollectionConverters._
 
-class JibWorkerImpl extends JibWorker {
+class JibInJvmWorker extends JibWorker {
   def build(
       image: Image,
       tags: Seq[String],

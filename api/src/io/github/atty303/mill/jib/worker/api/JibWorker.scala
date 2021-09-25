@@ -1,4 +1,4 @@
-package io.github.atty303.mill.jib.worker
+package io.github.atty303.mill.jib.worker.api
 
 import java.nio.file.Path
 

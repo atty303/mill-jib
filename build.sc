@@ -4,7 +4,7 @@ import scalalib._
 import publish._
 
 trait MyPublishModule extends PublishModule {
-  override def artifactName = "mill-" + super.artifactName()
+  //override def artifactName = "mill-" + super.artifactName()
   override def publishVersion = "0.1.0"
   override def pomSettings = PomSettings(
     description = "Dockerize java applications on mill builds",
@@ -24,14 +24,14 @@ trait MyModule extends MyPublishModule with ScalaModule {
 def millVersion = "0.9.9"
 
 object api extends MyModule {
-  override def artifactName = "io.github.atty303.mill.jib-api"
+  override def artifactName = "mill-jib-api"
   override def compileIvyDeps = Agg(
     ivy"com.lihaoyi::mill-scalalib:${millVersion}"
   )
 }
 
 object worker extends MyModule {
-  override def artifactName = "io.github.atty303.mill.jib-worker"
+  override def artifactName = "mill-jib-worker"
   override def moduleDeps = Seq(api)
   override def compileIvyDeps = Agg(
     ivy"com.lihaoyi::mill-scalalib:${millVersion}",
@@ -40,9 +40,12 @@ object worker extends MyModule {
 }
 
 object jib extends MyModule {
-  override def artifactName = "io.github.atty303.mill.jib"
+  override def artifactName = "mill-jib"
   override def moduleDeps = Seq(api)
 
+  override def ivyDeps = Agg(
+    ivy"com.linkedin.cytodynamics:cytodynamics-nucleus:0.2.0"
+  )
   override def compileIvyDeps = Agg(
     ivy"com.lihaoyi::mill-scalalib:${millVersion}"
   )

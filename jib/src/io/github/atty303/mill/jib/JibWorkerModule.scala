@@ -1,6 +1,6 @@
 package io.github.atty303.mill.jib
 
-import io.github.atty303.mill.jib.worker.JibWorkerManager
+import io.github.atty303.mill.jib.worker.api.JibWorkerManager
 import mill.T
 import mill.define.{Discover, ExternalModule, Module, Worker}
 

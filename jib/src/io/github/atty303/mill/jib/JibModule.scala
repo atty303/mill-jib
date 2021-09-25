@@ -1,7 +1,7 @@
 package io.github.atty303.mill.jib
 
 import io.github.atty303.mill.jib
-import io.github.atty303.mill.jib.worker.{Image, JibWorker}
+import io.github.atty303.mill.jib.worker.api.{Image, JibWorker}
 import mill._
 import mill.define.{Command, Task}
 import mill.scalalib._
