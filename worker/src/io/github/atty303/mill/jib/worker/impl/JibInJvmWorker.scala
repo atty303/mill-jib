@@ -1,5 +1,6 @@
 package io.github.atty303.mill.jib.worker.impl
 
+import com.google.cloud.tools.jib.api.LogEvent.Level
 import com.google.cloud.tools.jib.api.{
   Containerizer,
   DockerDaemonImage,
@@ -8,12 +9,14 @@ import com.google.cloud.tools.jib.api.{
   RegistryImage
 }
 import io.github.atty303.mill.jib.worker.api.{Image, JibWorker}
+import mill.api.Logger
 
 import java.nio.file.Path
 import scala.jdk.CollectionConverters._
 
 class JibInJvmWorker extends JibWorker {
-  def build(
+  override def build(
+      logger: Logger,
       image: Image,
       tags: Seq[String],
       baseImage: String,
@@ -23,7 +26,6 @@ class JibInJvmWorker extends JibWorker {
       jvmFlags: Seq[String],
       labels: Map[String, String]
   ): Unit = {
-
     val cont0 = image match {
       case Image.DockerDaemonImage(v) =>
         Containerizer.to(DockerDaemonImage.named(v))
@@ -36,7 +38,14 @@ class JibInJvmWorker extends JibWorker {
       .addEventHandler(
         classOf[LogEvent],
         (t: LogEvent) =>
-          System.err.println(s"[${t.getLevel.name()}] ${t.getMessage}")
+          t.getLevel match {
+            case Level.ERROR     => logger.error(t.getMessage)
+            case Level.WARN      => logger.error(t.getMessage)
+            case Level.LIFECYCLE => logger.info(t.getMessage)
+            case Level.PROGRESS  => logger.ticker(t.getMessage)
+            case Level.INFO      => logger.debug(t.getMessage)
+            case Level.DEBUG     => logger.debug(t.getMessage)
+          }
       )
 
     JavaContainerBuilder

@@ -1,5 +1,7 @@
 package io.github.atty303.mill.jib.worker.api
 
+import mill.api.Logger
+
 import java.nio.file.Path
 
 sealed trait Image
@@ -11,6 +13,7 @@ object Image {
 
 trait JibWorker {
   def build(
+      logger: Logger,
       image: Image,
       tags: Seq[String],
       baseImage: String,

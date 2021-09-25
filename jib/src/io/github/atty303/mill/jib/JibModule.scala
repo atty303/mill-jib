@@ -64,6 +64,7 @@ trait JibModule { outer: JavaModule =>
 
     def buildLocal(): Command[Unit] = T.command {
       jibWorkerTask().build(
+        T.ctx.log,
         Image.DockerDaemonImage(image()),
         additionalTags(),
         baseImage(),
@@ -77,6 +78,7 @@ trait JibModule { outer: JavaModule =>
 
     def buildPush(): Command[Unit] = T.command {
       jibWorkerTask().build(
+        T.ctx.log,
         Image.RegistryImage(image(), registryUsername(), registryPassword()),
         additionalTags(),
         baseImage(),
