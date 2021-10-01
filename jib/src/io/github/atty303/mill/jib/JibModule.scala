@@ -3,6 +3,7 @@ package io.github.atty303.mill.jib
 import io.github.atty303.mill.jib
 import io.github.atty303.mill.jib.worker.api.{
   ContainerConfig,
+  FileEntry,
   Image,
   ImageFormat,
   JibWorker,
@@ -152,6 +153,14 @@ trait JibModule { outer: JavaModule =>
       */
     def workingDirectory: T[Option[String]] = T(None)
 
+    def additionalLayer: T[Map[os.Path, String]] =
+      T.input(Map.empty[os.Path, String])
+    def additionalLayerFileEntries: Task[Seq[FileEntry]] = T.task {
+      additionalLayer().toSeq.map { case (path, target) =>
+        FileEntry(path, target)
+      }
+    }
+
     def containerConfig: Task[ContainerConfig] = T.task {
       ContainerConfig(
         entrypoint(),
@@ -164,15 +173,12 @@ trait JibModule { outer: JavaModule =>
         creationTime(),
         platforms(),
         user(),
-        workingDirectory()
+        workingDirectory(),
+        Seq(("extra", additionalLayerFileEntries()))
       )
     }
 
     def jvmFlags: T[Seq[String]] = T(Seq.empty[String])
-
-    def ivyJars: T[Agg[PathRef]] = T {
-      resolveDeps(T.task { runIvyDeps() ++ transitiveIvyDeps() })()
-    }
 
     def projectJars: Task[Seq[(String, PathRef)]] =
       T.traverse(transitiveModuleDeps) { m =>
@@ -216,7 +222,7 @@ trait JibModule { outer: JavaModule =>
         additionalTags(),
         baseImage(),
         outer.finalMainClass(),
-        ivyJars().map(_.path.toNIO).iterator.to(Seq),
+        resolvedRunIvyDeps().map(_.path.toNIO).iterator.to(Seq),
         renamedProjectJars().map(_.path.toNIO),
         jvmFlags(),
         containerConfig()
@@ -230,7 +236,7 @@ trait JibModule { outer: JavaModule =>
         additionalTags(),
         baseImage(),
         outer.finalMainClass(),
-        ivyJars().map(_.path.toNIO).iterator.to(Seq),
+        resolvedRunIvyDeps().map(_.path.toNIO).iterator.to(Seq),
         renamedProjectJars().map(_.path.toNIO),
         jvmFlags(),
         containerConfig()

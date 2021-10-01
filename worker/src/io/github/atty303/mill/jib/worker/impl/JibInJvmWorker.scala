@@ -1,7 +1,12 @@
 package io.github.atty303.mill.jib.worker.impl
 
 import com.google.cloud.tools.jib.api.LogEvent.Level
-import com.google.cloud.tools.jib.api.buildplan.AbsoluteUnixPath
+import com.google.cloud.tools.jib.api.buildplan.{
+  AbsoluteUnixPath,
+  FileEntriesLayer,
+  FileEntry,
+  FilePermissions
+}
 import com.google.cloud.tools.jib.api.{
   Containerizer,
   DockerDaemonImage,
@@ -98,6 +103,24 @@ class JibInJvmWorker extends JibWorker {
     builder = cc.workingDirectory match {
       case None      => builder
       case Some(dir) => builder.setWorkingDirectory(AbsoluteUnixPath.get(dir))
+    }
+    builder = cc.additionalLayers.foldLeft(builder) { (b, l) =>
+      {
+        val (name, entries) = l
+        val layer = entries.foldLeft(FileEntriesLayer.builder().setName(name)) {
+          (c, e) =>
+            c.addEntry(
+              new FileEntry(
+                e.sourceFile.toNIO,
+                AbsoluteUnixPath.get(e.extractionPath),
+                FilePermissions.fromOctalString(e.effectivePermissions),
+                e.modificationTime,
+                e.ownership
+              )
+            )
+        }
+        b.addFileEntriesLayer(layer.build())
+      }
     }
 
     builder.containerize(cont2)

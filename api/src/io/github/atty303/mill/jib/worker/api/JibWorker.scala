@@ -2,7 +2,7 @@ package io.github.atty303.mill.jib.worker.api
 
 import mill.api.Logger
 
-import java.nio.file.Path
+import java.nio.file.{Path => NioPath}
 import java.time.Instant
 
 sealed trait Image
@@ -30,6 +30,17 @@ object Port {
   }
 }
 
+case class FileEntry(
+    sourceFile: os.Path,
+    extractionPath: String,
+    permissions: Option[String] = None,
+    modificationTime: Instant = Instant.ofEpochSecond(1),
+    ownership: String = ""
+) {
+  def effectivePermissions: String =
+    permissions.getOrElse(if (sourceFile.toIO.isDirectory) "755" else "644")
+}
+
 case class Platform(architecture: String, os: String)
 
 case class ContainerConfig(
@@ -43,7 +54,8 @@ case class ContainerConfig(
     creationTime: Instant,
     platforms: Set[Platform],
     user: Option[String],
-    workingDirectory: Option[String]
+    workingDirectory: Option[String],
+    additionalLayers: Seq[(String, Seq[FileEntry])]
 )
 
 trait JibWorker {
@@ -53,8 +65,8 @@ trait JibWorker {
       tags: Seq[String],
       baseImage: String,
       mainClass: String,
-      deps: Seq[Path],
-      projectDeps: Seq[Path],
+      deps: Seq[NioPath],
+      projectDeps: Seq[NioPath],
       jvmFlags: Seq[String],
       containerConfig: ContainerConfig
   ): Unit
