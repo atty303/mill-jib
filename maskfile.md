@@ -9,8 +9,8 @@ mill __.publishLocal
 
 ```bash
 mill mill.scalalib.PublishModule/publishAll \
-  $SONATYPE_USER:$SONATYPE_PASSWORD \
-  $GPG_PASSWORD \
   __.publishArtifacts \
+  --sonatypeUri https://s01.oss.sonatype.org/service/local \
+  --sonatypeCreds $SONATYPE_USER:$SONATYPE_PASSWORD \
   --release true
 ```
