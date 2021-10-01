@@ -1,6 +1,6 @@
 # mill-jib
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.atty303/mill-jib/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.github.atty303/mill-jib)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.atty303/mill-jib_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.github.atty303/mill-jib_2.13)
 
 Dockerize java applications on mill builds.
 
