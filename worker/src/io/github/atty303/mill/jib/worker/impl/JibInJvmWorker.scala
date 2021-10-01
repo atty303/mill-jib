@@ -9,14 +9,19 @@ import com.google.cloud.tools.jib.api.buildplan.{
 }
 import com.google.cloud.tools.jib.api.{
   Containerizer,
+  Credential,
+  CredentialRetriever,
   DockerDaemonImage,
+  ImageReference,
   JavaContainerBuilder,
   LogEvent,
   RegistryImage,
   buildplan
 }
+import com.google.cloud.tools.jib.frontend.CredentialRetrieverFactory
 import io.github.atty303.mill.jib.worker.api.{
   ContainerConfig,
+  Credentials,
   Image,
   ImageFormat,
   JibWorker,
@@ -26,41 +31,51 @@ import io.github.atty303.mill.jib.worker.api.{
 import mill.api.Logger
 
 import java.nio.file.Path
+import java.util.Optional
+import java.util.function.Consumer
 import scala.jdk.CollectionConverters._
 
 class JibInJvmWorker extends JibWorker {
   override def build(
       logger: Logger,
+      credentials: Credentials,
       image: Image,
       tags: Seq[String],
-      baseImage: String,
+      baseImageName: String,
       mainClass: String,
       deps: Seq[Path],
       projectDeps: Seq[Path],
       jvmFlags: Seq[String],
       cc: ContainerConfig
   ): Unit = {
+    val targetImage = image match {
+      case Image.DockerDaemonImage(v) => ImageReference.parse(v)
+      case Image.RegistryImage(v)     => ImageReference.parse(v)
+    }
+    val baseImage = imageFactory(
+      ImageReference.parse(baseImageName),
+      credentials.baseUsername,
+      credentials.basePassword,
+      logger
+    )
+
     val cont0 = image match {
-      case Image.DockerDaemonImage(v) =>
-        Containerizer.to(DockerDaemonImage.named(v))
-      case Image.RegistryImage(v, u, p) =>
-        Containerizer.to(RegistryImage.named(v).addCredential(u, p))
+      case Image.DockerDaemonImage(_) =>
+        Containerizer.to(DockerDaemonImage.named(targetImage))
+      case Image.RegistryImage(_) =>
+        Containerizer.to(
+          imageFactory(
+            targetImage,
+            credentials.targetUsername,
+            credentials.targetPassword,
+            logger
+          )
+        )
     }
     val cont1 = tags.foldLeft(cont0)((acc, t) => acc.withAdditionalTag(t))
     val cont2 = cont1
       .setApplicationLayersCache(Containerizer.DEFAULT_BASE_CACHE_DIRECTORY)
-      .addEventHandler(
-        classOf[LogEvent],
-        (t: LogEvent) =>
-          t.getLevel match {
-            case Level.ERROR     => logger.error(t.getMessage)
-            case Level.WARN      => logger.error(t.getMessage)
-            case Level.LIFECYCLE => logger.info(t.getMessage)
-            case Level.PROGRESS  => logger.ticker(t.getMessage)
-            case Level.INFO      => logger.debug(t.getMessage)
-            case Level.DEBUG     => logger.debug(t.getMessage)
-          }
-      )
+      .addEventHandler(classOf[LogEvent], makeLogger(logger))
 
     var builder = JavaContainerBuilder
       .from(baseImage)
@@ -124,6 +139,44 @@ class JibInJvmWorker extends JibWorker {
     }
 
     builder.containerize(cont2)
+  }
+
+  private def makeLogger(logger: Logger): Consumer[LogEvent] = (t: LogEvent) =>
+    t.getLevel match {
+      case Level.ERROR     => logger.error(t.getMessage)
+      case Level.WARN      => logger.error(t.getMessage)
+      case Level.LIFECYCLE => logger.info(t.getMessage)
+      case Level.PROGRESS  => logger.ticker(t.getMessage)
+      case Level.INFO      => logger.debug(t.getMessage)
+      case Level.DEBUG     => logger.debug(t.getMessage)
+    }
+
+  private def imageFactory(
+      imageReference: ImageReference,
+      username: Option[String],
+      password: Option[String],
+      logger: Logger
+  ): RegistryImage = {
+    val image0 = RegistryImage.named(imageReference)
+    val crf =
+      CredentialRetrieverFactory.forImage(imageReference, makeLogger(logger))
+
+    image0
+      .addCredentialRetriever(literalCredentials(username, password))
+      .addCredentialRetriever(crf.dockerConfig())
+      .addCredentialRetriever(crf.wellKnownCredentialHelpers())
+      .addCredentialRetriever(crf.googleApplicationDefaultCredentials())
+  }
+
+  private def literalCredentials(
+      username: Option[String],
+      password: Option[String]
+  ): CredentialRetriever = () => {
+    val o = for {
+      u <- username
+      p <- password
+    } yield Credential.from(u, p)
+    Optional.ofNullable(o.orNull)
   }
 
   private def portAsJava(port: Port): buildplan.Port = port.protocol match {

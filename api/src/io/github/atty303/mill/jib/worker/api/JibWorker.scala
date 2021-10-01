@@ -8,9 +8,15 @@ import java.time.Instant
 sealed trait Image
 object Image {
   case class DockerDaemonImage(image: String) extends Image
-  case class RegistryImage(image: String, username: String, password: String)
-      extends Image
+  case class RegistryImage(image: String) extends Image
 }
+
+case class Credentials(
+    baseUsername: Option[String],
+    basePassword: Option[String],
+    targetUsername: Option[String],
+    targetPassword: Option[String]
+)
 
 sealed trait ImageFormat
 object ImageFormat {
@@ -61,6 +67,7 @@ case class ContainerConfig(
 trait JibWorker {
   def build(
       logger: Logger,
+      credentials: Credentials,
       image: Image,
       tags: Seq[String],
       baseImage: String,

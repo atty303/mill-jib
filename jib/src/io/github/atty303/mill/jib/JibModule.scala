@@ -3,6 +3,7 @@ package io.github.atty303.mill.jib
 import io.github.atty303.mill.jib
 import io.github.atty303.mill.jib.worker.api.{
   ContainerConfig,
+  Credentials,
   FileEntry,
   Image,
   ImageFormat,
@@ -185,8 +186,23 @@ trait JibModule { outer: JavaModule =>
         T.task(m.artifactId() -> m.jar())
       }
 
-    def registryUsername: T[String] = ""
-    def registryPassword: T[String] = ""
+    def baseUsername: T[Option[String]] =
+      T.input(T.env.get("JIB_BASE_IMAGE_USERNAME"))
+    def basePassword: T[Option[String]] =
+      T.input(T.env.get("JIB_BASE_IMAGE_PASSWORD"))
+    def targetUsername: T[Option[String]] =
+      T.input(T.env.get("JIB_TARGET_IMAGE_USERNAME"))
+    def targetPassword: T[Option[String]] =
+      T.input(T.env.get("JIB_TARGET_IMAGE_PASSWORD"))
+
+    def credentials: Task[Credentials] = T.task {
+      Credentials(
+        baseUsername(),
+        basePassword(),
+        targetUsername(),
+        targetPassword()
+      )
+    }
 
     def jibVersion: T[String] = "0.20.0"
     def jibToolsDeps: T[Agg[Dep]] = T {
@@ -218,6 +234,7 @@ trait JibModule { outer: JavaModule =>
     def buildDocker(): Command[Unit] = T.command {
       jibWorkerTask().build(
         T.ctx.log,
+        credentials(),
         Image.DockerDaemonImage(image()),
         additionalTags(),
         baseImage(),
@@ -232,7 +249,8 @@ trait JibModule { outer: JavaModule =>
     def buildImage(): Command[Unit] = T.command {
       jibWorkerTask().build(
         T.ctx.log,
-        Image.RegistryImage(image(), registryUsername(), registryPassword()),
+        credentials(),
+        Image.RegistryImage(image()),
         additionalTags(),
         baseImage(),
         outer.finalMainClass(),
