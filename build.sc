@@ -3,7 +3,7 @@ import mill.scalalib._
 import mill.scalalib.publish._
 
 trait MyPublishModule extends PublishModule {
-  override def publishVersion = "0.1.2"
+  override def publishVersion = "0.2.0"
   override def pomSettings = PomSettings(
     description = "Dockerize java applications on mill builds",
     organization = "io.github.atty303",
@@ -19,7 +19,7 @@ trait MyModule extends MyPublishModule with ScalaModule {
   def scalaVersion = "2.13.6"
 }
 
-def millVersion = "0.10.0-M5"
+def millVersion = "0.10.4"
 
 object api extends MyModule {
   override def artifactName = "mill-jib-api"
