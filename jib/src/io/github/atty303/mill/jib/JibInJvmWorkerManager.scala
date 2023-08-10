@@ -19,7 +19,7 @@ class JibInJvmWorkerManager(ctx: Ctx.Log) extends JibWorkerManager {
         ctx.log.debug(
           s"Creating Classloader with classpath: [${toolsClasspath}]"
         )
-        val classLoader = new JibClassLoader(
+        val classLoader = new URLClassLoader(
           toolsClasspath.map(_.path.toNIO.toUri.toURL).toArray,
           getClass.getClassLoader
         )
@@ -46,24 +46,5 @@ class JibInJvmWorkerManager(ctx: Ctx.Log) extends JibWorkerManager {
     }
     workerCache += toolsClasspath -> (worker -> (1 + count))
     worker
-  }
-}
-
-// Need for isolating guava...
-class JibClassLoader(classpath: Array[URL], parent: ClassLoader)
-    extends URLClassLoader(classpath, parent) {
-  override def loadClass(name: String, resolve: Boolean): Class[_] = {
-    getClassLoadingLock(name).synchronized {
-      if (name.startsWith("io.github.atty303.mill.jib.worker.api.")) {
-        parent.loadClass(name)
-      } else {
-        try {
-          findClass(name)
-        } catch {
-          case _: ClassNotFoundException =>
-            parent.loadClass(name)
-        }
-      }
-    }
   }
 }

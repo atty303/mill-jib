@@ -204,7 +204,7 @@ trait JibModule { outer: JavaModule =>
       )
     }
 
-    def jibVersion: T[String] = "0.20.0"
+    def jibVersion: T[String] = "0.24.0"
     def jibToolsDeps: T[Agg[Dep]] = T {
       Agg(
         ivy"com.google.cloud.tools:jib-core:${jibVersion()}",
@@ -213,7 +213,7 @@ trait JibModule { outer: JavaModule =>
     }
 
     def jibToolsClasspath: T[Agg[PathRef]] = T {
-      resolveDeps(jibToolsDeps)
+      resolveDeps(jibToolsDeps.map(_.map(_.bindDep("", "", ""))))
     }
 
     protected def jibWorkerTask: Task[JibWorker] = T.task {
