@@ -3,4 +3,4 @@ before_install:
 install:
   - .mise/mise exec -- ./mill __.publishM2Local
 env:
-  MISE_TRUSTED_CONFIG_PATHS: /build
+  MISE_TRUSTED_CONFIG_PATHS: /home/jitpack/build
