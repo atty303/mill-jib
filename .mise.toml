@@ -1,2 +1,5 @@
 [tools]
 java = "17"
+
+[tasks."publish:local"]
+run = "./mill __.publishM2Local"
