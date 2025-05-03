@@ -16,7 +16,7 @@ trait MyPublishModule extends PublishModule {
 }
 
 trait MyModule extends MyPublishModule with ScalaModule {
-  def scalaVersion = "2.13.11"
+  def scalaVersion = "2.13.16"
 }
 
 def millVersion = "0.11.1"

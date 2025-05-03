@@ -1,0 +1,4 @@
+before_install:
+   - .mise/mise install
+install:
+   - .mise/mise exec -- ./mill __.publishM2Local

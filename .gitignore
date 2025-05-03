@@ -1,4 +1,6 @@
 .bsp
+.bloop
+.metals
 .coursier
 .idea
 out
