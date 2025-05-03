@@ -74,7 +74,8 @@ class JibInJvmWorker extends JibWorker {
     }
     val cont1 = tags.foldLeft(cont0)((acc, t) => acc.withAdditionalTag(t))
     val cont2 = cont1
-      .setApplicationLayersCache(Containerizer.DEFAULT_BASE_CACHE_DIRECTORY)
+      // Disable shared cache to avoid OverlappingFileLockException
+      // .setApplicationLayersCache(Containerizer.DEFAULT_BASE_CACHE_DIRECTORY)
       .addEventHandler(classOf[LogEvent], makeLogger(logger))
 
     var builder = JavaContainerBuilder
