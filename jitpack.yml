@@ -1,4 +1,6 @@
 before_install:
-   - .mise/mise install
+  - .mise/mise install
 install:
-   - .mise/mise exec -- ./mill __.publishM2Local
+  - .mise/mise exec -- ./mill __.publishM2Local
+env:
+  MISE_TRUSTED_CONFIG_PATHS: /home/jitpack/build

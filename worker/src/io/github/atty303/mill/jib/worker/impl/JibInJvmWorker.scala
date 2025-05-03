@@ -1,33 +1,28 @@
 package io.github.atty303.mill.jib.worker.impl
 
+import com.google.cloud.tools.jib.api.Containerizer
+import com.google.cloud.tools.jib.api.Credential
+import com.google.cloud.tools.jib.api.CredentialRetriever
+import com.google.cloud.tools.jib.api.DockerDaemonImage
+import com.google.cloud.tools.jib.api.ImageReference
+import com.google.cloud.tools.jib.api.JavaContainerBuilder
+import com.google.cloud.tools.jib.api.JibContainerBuilder
+import com.google.cloud.tools.jib.api.LogEvent
 import com.google.cloud.tools.jib.api.LogEvent.Level
-import com.google.cloud.tools.jib.api.buildplan.{
-  AbsoluteUnixPath,
-  FileEntriesLayer,
-  FileEntry,
-  FilePermissions
-}
-import com.google.cloud.tools.jib.api.{
-  Containerizer,
-  Credential,
-  CredentialRetriever,
-  DockerDaemonImage,
-  ImageReference,
-  JavaContainerBuilder,
-  LogEvent,
-  RegistryImage,
-  buildplan
-}
+import com.google.cloud.tools.jib.api.RegistryImage
+import com.google.cloud.tools.jib.api.buildplan
+import com.google.cloud.tools.jib.api.buildplan.AbsoluteUnixPath
+import com.google.cloud.tools.jib.api.buildplan.FileEntriesLayer
+import com.google.cloud.tools.jib.api.buildplan.FileEntry
+import com.google.cloud.tools.jib.api.buildplan.FilePermissions
 import com.google.cloud.tools.jib.frontend.CredentialRetrieverFactory
-import io.github.atty303.mill.jib.worker.api.{
-  ContainerConfig,
-  Credentials,
-  Image,
-  ImageFormat,
-  JibWorker,
-  Platform,
-  Port
-}
+import io.github.atty303.mill.jib.worker.api.ContainerConfig
+import io.github.atty303.mill.jib.worker.api.Credentials
+import io.github.atty303.mill.jib.worker.api.Image
+import io.github.atty303.mill.jib.worker.api.ImageFormat
+import io.github.atty303.mill.jib.worker.api.JibWorker
+import io.github.atty303.mill.jib.worker.api.Platform
+import io.github.atty303.mill.jib.worker.api.Port
 import mill.api.Logger
 
 import java.nio.file.Path
@@ -73,8 +68,11 @@ class JibInJvmWorker extends JibWorker {
         )
     }
     val cont1 = tags.foldLeft(cont0)((acc, t) => acc.withAdditionalTag(t))
+    val cacheDir = Containerizer.DEFAULT_BASE_CACHE_DIRECTORY
+      .resolve(Containerizer.DEFAULT_APPLICATION_CACHE_DIRECTORY_NAME)
     val cont2 = cont1
-      .setApplicationLayersCache(Containerizer.DEFAULT_BASE_CACHE_DIRECTORY)
+      .setBaseImageLayersCache(cacheDir)
+      .setApplicationLayersCache(cacheDir)
       .addEventHandler(classOf[LogEvent], makeLogger(logger))
 
     var builder = JavaContainerBuilder
@@ -138,7 +136,7 @@ class JibInJvmWorker extends JibWorker {
       }
     }
 
-    builder.containerize(cont2)
+    containerizeWithLock(logger, builder, cont2)
   }
 
   private def makeLogger(logger: Logger): Consumer[LogEvent] = (t: LogEvent) =>
@@ -186,4 +184,33 @@ class JibInJvmWorker extends JibWorker {
 
   private def platformAsJava(platform: Platform): buildplan.Platform =
     new buildplan.Platform(platform.architecture, platform.os)
+
+  // Based on https://github.com/quarkusio/quarkus/pull/35308
+  /** Wraps the containerize invocation in a synchronized block to avoid OverlappingFileLockException when running parallel jib
+    * builds (e.g. mill --jobs 2 ...).
+    * Each build thread uses its own augmentation CL (which is why the OverlappingFileLockException prevention in jib doesn't
+    * work here), so the lock object
+    * has to be loaded via the parent classloader so that all build threads lock the same object.
+    */
+  private def containerizeWithLock(
+      logger: Logger,
+      builder: JibContainerBuilder,
+      containerizer: Containerizer
+  ) = {
+    val parentCl = getClass().getClassLoader().getParent()
+    val lock =
+      try {
+        parentCl.loadClass("io.github.atty303.mill.jib.JibInJvmWorkerManager")
+      } catch {
+        case _: ClassNotFoundException => {
+          logger.error(
+            s"Could not load io.github.atty303.mill.jib.JibInJvmWorkerManager with parent classloader: ${parentCl}"
+          )
+          getClass()
+        }
+      }
+    lock.synchronized {
+      builder.containerize(containerizer)
+    }
+  }
 }
