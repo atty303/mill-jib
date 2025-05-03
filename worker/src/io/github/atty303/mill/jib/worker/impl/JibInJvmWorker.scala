@@ -68,9 +68,11 @@ class JibInJvmWorker extends JibWorker {
         )
     }
     val cont1 = tags.foldLeft(cont0)((acc, t) => acc.withAdditionalTag(t))
+    val cacheDir = Containerizer.DEFAULT_BASE_CACHE_DIRECTORY
+      .resolve(Containerizer.DEFAULT_APPLICATION_CACHE_DIRECTORY_NAME)
     val cont2 = cont1
-      // Disable shared cache to avoid OverlappingFileLockException
-      // .setApplicationLayersCache(Containerizer.DEFAULT_BASE_CACHE_DIRECTORY)
+      .setBaseImageLayersCache(cacheDir)
+      .setApplicationLayersCache(cacheDir)
       .addEventHandler(classOf[LogEvent], makeLogger(logger))
 
     var builder = JavaContainerBuilder
@@ -184,23 +186,29 @@ class JibInJvmWorker extends JibWorker {
     new buildplan.Platform(platform.architecture, platform.os)
 
   // Based on https://github.com/quarkusio/quarkus/pull/35308
-  /**
-   * Wraps the containerize invocation in a synchronized block to avoid OverlappingFileLockException when running parallel jib
-   * builds (e.g. mill --jobs 2 ...).
-   * Each build thread uses its own augmentation CL (which is why the OverlappingFileLockException prevention in jib doesn't
-   * work here), so the lock object
-   * has to be loaded via the parent classloader so that all build threads lock the same object.
-   */
-  private def containerizeWithLock(logger: Logger, builder: JibContainerBuilder, containerizer: Containerizer) = {
+  /** Wraps the containerize invocation in a synchronized block to avoid OverlappingFileLockException when running parallel jib
+    * builds (e.g. mill --jobs 2 ...).
+    * Each build thread uses its own augmentation CL (which is why the OverlappingFileLockException prevention in jib doesn't
+    * work here), so the lock object
+    * has to be loaded via the parent classloader so that all build threads lock the same object.
+    */
+  private def containerizeWithLock(
+      logger: Logger,
+      builder: JibContainerBuilder,
+      containerizer: Containerizer
+  ) = {
     val parentCl = getClass().getClassLoader().getParent()
-    val lock = try {
-      parentCl.loadClass("io.github.atty303.mill.jib.JibInJvmWorkerManager")
-    } catch {
-      case _: ClassNotFoundException => {
-        logger.error(s"Could not load io.github.atty303.mill.jib.JibInJvmWorkerManager with parent classloader: ${parentCl}")
-        getClass()
+    val lock =
+      try {
+        parentCl.loadClass("io.github.atty303.mill.jib.JibInJvmWorkerManager")
+      } catch {
+        case _: ClassNotFoundException => {
+          logger.error(
+            s"Could not load io.github.atty303.mill.jib.JibInJvmWorkerManager with parent classloader: ${parentCl}"
+          )
+          getClass()
+        }
       }
-    }
     lock.synchronized {
       builder.containerize(containerizer)
     }
