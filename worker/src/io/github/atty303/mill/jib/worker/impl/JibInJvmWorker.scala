@@ -209,8 +209,12 @@ class JibInJvmWorker extends JibWorker {
           getClass()
         }
       }
+    logger.debug(s"containerize: Trying to acquire lock [lock=${lock}, classloader=${lock.getClassLoader()}]")
     lock.synchronized {
+      logger.debug(s"containerize: The lock was acquired, begin build [lock=${lock}, classloader=${lock.getClassLoader()}]")
       builder.containerize(containerizer)
+      logger.debug(s"containerize: done [lock=${lock}, classloader=${lock.getClassLoader()}]")
     }
+    logger.debug(s"containerize: The lock was released [lock=${lock}, classloader=${lock.getClassLoader()}]")
   }
 }
