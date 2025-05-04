@@ -10,7 +10,7 @@ def isJitPack = T.input {
 
 // Support for Maven Central and JitPack
 def envGroup = T.input {
-  val g = T.env.get("GROUP").getOrElse( "io.github.atty303")
+  val g = T.env.get("GROUP").map(g => s"${g}.mill-jib").getOrElse( "io.github.atty303")
   T.log.info(s"Group: $g")
   g
 }
