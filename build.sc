@@ -2,11 +2,31 @@ import mill._
 import mill.scalalib._
 import mill.scalalib.publish._
 
+def isJitPack = T.input {
+  val jitPack = T.env.getOrElse("JITPACK", "false").toBoolean
+  T.log.info(s"JitPack: $jitPack")
+  jitPack
+}
+
+// Support for Maven Central and JitPack
+def envGroup = T.input {
+  val g = T.env.get("GROUP").getOrElse( "io.github.atty303")
+  T.log.info(s"Group: $g")
+  g
+}
+
+// Support for Maven Central and JitPack
+def envVersion = T.input {
+  val v = T.env.getOrElse("VERSION", "0.3.0")
+  T.log.info(s"Version: $v")
+  v
+}
+
 trait MyPublishModule extends PublishModule {
-  override def publishVersion = "0.4.0"
+  override def publishVersion = envVersion()
   override def pomSettings = PomSettings(
     description = "Dockerize java applications on mill builds",
-    organization = "io.github.atty303",
+    organization = envGroup(),
     url = "https://github.com/atty303/mill-jib",
     licenses = Seq(License.MIT),
     versionControl = VersionControl.github("atty303", "mill-jib"),
