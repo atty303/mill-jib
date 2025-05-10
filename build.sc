@@ -10,14 +10,14 @@ def isJitPack = T.input {
 
 // Support for Maven Central and JitPack
 def envGroup = T.input {
-  val g = T.env.get("GROUP").map(g => s"${g}.mill-jib").getOrElse( "io.github.atty303")
+  val g = T.env.get("GROUP").map(g => s"${g}.mill-jib").getOrElse("io.github.atty303")
   T.log.info(s"Group: $g")
   g
 }
 
 // Support for Maven Central and JitPack
 def envVersion = T.input {
-  val v = T.env.getOrElse("VERSION", "0.3.0")
+  val v = T.env.getOrElse("VERSION", "0.4.0")
   T.log.info(s"Version: $v")
   v
 }
@@ -39,7 +39,7 @@ trait MyModule extends MyPublishModule with ScalaModule {
   def scalaVersion = "2.13.16"
 }
 
-def millVersion = "0.11.1"
+def millVersion = "0.11.13"
 
 object api extends MyModule {
   override def artifactName = "mill-jib-api"
