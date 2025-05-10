@@ -153,6 +153,7 @@ class JibInJvmWorker extends JibWorker {
     }
 
     containerizeWithLock(logger, builder, cont)
+    logger.ticker(s"Containerized ${targetImage}")
   }
 
   private def makeLogger(logger: Logger): Consumer[LogEvent] = (t: LogEvent) =>
