@@ -64,6 +64,13 @@ case class ContainerConfig(
     additionalLayers: Seq[(String, Seq[FileEntry])]
 )
 
+sealed trait CachePath
+object CachePath {
+  case object None extends CachePath
+  case object Default extends CachePath
+  case class Directory(path: os.Path) extends CachePath
+}
+
 trait JibWorker {
   def build(
       logger: Logger,
@@ -75,6 +82,8 @@ trait JibWorker {
       deps: Seq[NioPath],
       projectDeps: Seq[NioPath],
       jvmFlags: Seq[String],
-      containerConfig: ContainerConfig
+      containerConfig: ContainerConfig,
+      baseImageLayersCachePath: CachePath,
+      applicationLayersCachePath: CachePath,
   ): Unit
 }

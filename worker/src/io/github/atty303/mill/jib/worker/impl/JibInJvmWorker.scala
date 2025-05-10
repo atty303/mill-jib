@@ -16,6 +16,7 @@ import com.google.cloud.tools.jib.api.buildplan.FileEntriesLayer
 import com.google.cloud.tools.jib.api.buildplan.FileEntry
 import com.google.cloud.tools.jib.api.buildplan.FilePermissions
 import com.google.cloud.tools.jib.frontend.CredentialRetrieverFactory
+import io.github.atty303.mill.jib.worker.api.CachePath
 import io.github.atty303.mill.jib.worker.api.ContainerConfig
 import io.github.atty303.mill.jib.worker.api.Credentials
 import io.github.atty303.mill.jib.worker.api.Image
@@ -41,7 +42,9 @@ class JibInJvmWorker extends JibWorker {
       deps: Seq[Path],
       projectDeps: Seq[Path],
       jvmFlags: Seq[String],
-      cc: ContainerConfig
+      cc: ContainerConfig,
+      baseImageLayersCachePath: CachePath,
+      applicationLayersCachePath: CachePath,
   ): Unit = {
     val targetImage = image match {
       case Image.DockerDaemonImage(v) => ImageReference.parse(v)
@@ -54,7 +57,7 @@ class JibInJvmWorker extends JibWorker {
       logger
     )
 
-    val cont0 = image match {
+    var cont = image match {
       case Image.DockerDaemonImage(_) =>
         Containerizer.to(DockerDaemonImage.named(targetImage))
       case Image.RegistryImage(_) =>
@@ -67,13 +70,26 @@ class JibInJvmWorker extends JibWorker {
           )
         )
     }
-    val cont1 = tags.foldLeft(cont0)((acc, t) => acc.withAdditionalTag(t))
-    val cacheDir = Containerizer.DEFAULT_BASE_CACHE_DIRECTORY
+    cont = tags.foldLeft(cont)((acc, t) => acc.withAdditionalTag(t))
+    val defaultCacheDir = Containerizer.DEFAULT_BASE_CACHE_DIRECTORY
       .resolve(Containerizer.DEFAULT_APPLICATION_CACHE_DIRECTORY_NAME)
-    val cont2 = cont1
-      .setBaseImageLayersCache(cacheDir)
-      .setApplicationLayersCache(cacheDir)
-      .addEventHandler(classOf[LogEvent], makeLogger(logger))
+    cont = baseImageLayersCachePath match {
+      case CachePath.None =>
+        cont
+      case CachePath.Default =>
+        cont.setBaseImageLayersCache(defaultCacheDir)
+      case CachePath.Directory(path) =>
+        cont.setBaseImageLayersCache(path.toNIO)
+    }
+    cont = applicationLayersCachePath match {
+      case CachePath.None =>
+        cont
+      case CachePath.Default =>
+        cont.setApplicationLayersCache(defaultCacheDir)
+      case CachePath.Directory(path) =>
+        cont.setApplicationLayersCache(path.toNIO)
+    }
+    cont = cont.addEventHandler(classOf[LogEvent], makeLogger(logger))
 
     var builder = JavaContainerBuilder
       .from(baseImage)
@@ -136,7 +152,7 @@ class JibInJvmWorker extends JibWorker {
       }
     }
 
-    containerizeWithLock(logger, builder, cont2)
+    containerizeWithLock(logger, builder, cont)
   }
 
   private def makeLogger(logger: Logger): Consumer[LogEvent] = (t: LogEvent) =>
