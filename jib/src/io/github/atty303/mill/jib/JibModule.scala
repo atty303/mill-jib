@@ -2,6 +2,7 @@ package io.github.atty303.mill.jib
 
 import io.github.atty303.mill.jib
 import io.github.atty303.mill.jib.worker.api.{
+  CachePath,
   ContainerConfig,
   Credentials,
   FileEntry,
@@ -216,6 +217,9 @@ trait JibModule { outer: JavaModule =>
       resolveDeps(jibToolsDeps.map(_.map(_.bindDep("", "", ""))))
     }
 
+    def baseImageLayerCachePath: Task[CachePath] = T.task(CachePath.Default)
+    def applicationLayerCachePath: Task[CachePath] = T.task(CachePath.Default)
+
     protected def jibWorkerTask: Task[JibWorker] = T.task {
       jibWorkerModule
         .jibWorkerManager()
@@ -242,7 +246,9 @@ trait JibModule { outer: JavaModule =>
         resolvedRunIvyDeps().map(_.path.toNIO).iterator.to(Seq),
         renamedProjectJars().map(_.path.toNIO),
         jvmFlags(),
-        containerConfig()
+        containerConfig(),
+        baseImageLayerCachePath(),
+        applicationLayerCachePath()
       )
     }
 
@@ -257,7 +263,9 @@ trait JibModule { outer: JavaModule =>
         resolvedRunIvyDeps().map(_.path.toNIO).iterator.to(Seq),
         renamedProjectJars().map(_.path.toNIO),
         jvmFlags(),
-        containerConfig()
+        containerConfig(),
+        baseImageLayerCachePath(),
+        applicationLayerCachePath()
       )
     }
   }
